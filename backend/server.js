@@ -118,6 +118,19 @@ app.get('/processors', (req, res) => {
     res.json({ processors: cpuInfo });
 });
 
+app.get('/gpu-info', (req, res) => {
+    exec('lspci | grep VGA', (error, stdout, stderr) => {
+        if (error) {
+            res.status(500).json({ error: 'Failed to retrieve GPU information' });
+            return;
+        }
+
+        const gpuInfo = stdout.trim().split('\n').map((line) => line.trim());
+
+        res.json({ gpuInfo });
+    });
+});
+
 app.get('/environment-variables', (req, res) => {
     const environmentVariables = process.env;
     res.json({ environmentVariables });
