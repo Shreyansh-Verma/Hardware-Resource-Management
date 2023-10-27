@@ -2,24 +2,28 @@ const express = require('express')
 const os = require('os');
 const fs = require('fs');
 const { exec } = require('child_process');
-const app = express()
-const port = 5000
+const app = express();
+const port = 5000;
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+const cors = require('cors');
+app.use(cors());
 
 app.get('/system-info', (req, res) => {
-    const systemInfo = {
-        platform: os.platform(),
-        arch: os.arch(),
-        totalMemory: os.totalmem(),
-        freeMemory: os.freemem(),
-        cpus: os.cpus(),
-    };
+    try {
+        const systemInfo = {
+            platform: os.platform(),
+            arch: os.arch(),
+            totalMemory: os.totalmem(),
+            freeMemory: os.freemem(),
+            cpus: os.cpus(),
+        };
+        res.json(systemInfo);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
-    res.json(systemInfo);
-})
 
 app.get('/operating-system-info', (req, res) => {
     const osInfo = {
@@ -128,22 +132,22 @@ app.get('/memory', (req, res) => {
         memFree: {
             field: 'Free Memory',
             description: 'The amount of physical memory (RAM) that is currently free and available for use.',
-            value: `${(os.freemem() / 1024 / 1024).toFixed(2)} MB`,
+            value: `${(os.freemem() / 1024 / 1024 / 1024).toFixed(2)} GB`,
         },
         memAvailable: {
             field: 'Available Memory',
             description: 'The amount of memory that is available for programs to allocate without needing to swap to disk.',
-            value: `${(os.totalmem() - os.freemem() / 1024 / 1024).toFixed(2)} MB`,
+            value: `${((os.totalmem() - os.freemem()) / 1024 / 1024 / 1024).toFixed(2)} GB`,
         },
         buffers: {
             field: 'Buffers',
             description: 'Memory used by the kernel to buffer I/O operations before writing to disk.',
-            value: `${(os.totalmem() - os.freemem() - os.totalmem() * (os.freemem() / os.totalmem()) / 1024 / 1024).toFixed(2)} MB`,
+            value: `${((os.totalmem() - os.freemem() - os.totalmem() * (os.freemem() / os.totalmem())) / 1024 / 1024 / 1024).toFixed(2)} GB`,
         },
         cached: {
             field: 'Cached',
             description: 'Memory used by the system for caching data from disks.',
-            value: `${(os.totalmem() * (os.freemem() / os.totalmem()) / 1024 / 1024).toFixed(2)} MB`,
+            value: `${(os.totalmem() * (os.freemem() / os.totalmem()) / 1024 / 1024 / 1024).toFixed(2)} GB`,
         },
         // Add more memory types as needed
     };
@@ -170,6 +174,7 @@ app.get('/pci-devices', (req, res) => {
 app.get('/usb-devices', (req, res) => {
     exec('lsusb', (error, stdout, stderr) => {
         if (error) {
+            console.error('Error executing lsusb:', error);
             res.status(500).json({ error: 'Failed to retrieve USB device information' });
             return;
         }
@@ -181,6 +186,7 @@ app.get('/usb-devices', (req, res) => {
         res.json({ usbDevices });
     });
 });
+
 
 app.get('/printers', (req, res) => {
     exec('lpstat -a', (error, stdout, stderr) => {
