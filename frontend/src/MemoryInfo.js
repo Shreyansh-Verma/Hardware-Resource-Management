@@ -48,7 +48,7 @@ function MemoryInfo() {
                                     <p>
                                         <span className="font-semibold text-blue-500">Value :</span> {entry.value}
                                     </p>
-                                    <hr className='mt-2' />
+                                    <hr className='mb-2 mt-2' />
                                 </div>
                             ))}
 
