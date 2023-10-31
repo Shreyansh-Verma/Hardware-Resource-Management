@@ -3,13 +3,14 @@ import axios from 'axios';
 
 function MemoryInfo() {
     const [memInfo, setMemInfo] = useState(null);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
                 .get('http://localhost:5000/memory')
                 .then((response) => {
-                    console.log('res - ', response.data.memory);
+                    // console.log('res - ', response.data.memory);
                     setMemInfo(response.data.memory);
                 })
                 .catch((error) => {
@@ -21,12 +22,19 @@ function MemoryInfo() {
     }, []);
 
     return (
-        <div class="m-auto mt-2 max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <div class="max-h-[50vh] overflow-auto m-auto mt-2 max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
             <a href="#">
-                <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-blue-500">Mmeory Information</h5>
+                <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-blue-500">Memory Information</h5>
             </a>
+
+            <button
+                className="text-blue-500 cursor-pointer"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                {isExpanded ? '▼' : '▶'}
+            </button>
             {
-                memInfo ?
+                (isExpanded && memInfo) ?
                     <div className="text-gray-800 dark:text-white text-left">
                         {memInfo &&
                             Object.entries(memInfo).map(([key, entry]) => (

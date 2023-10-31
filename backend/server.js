@@ -35,13 +35,29 @@ app.get('/operating-system-info', (req, res) => {
     res.json(osInfo);
 });
 
+
 app.get('/kernel-modules', (req, res) => {
     exec('lsmod', (error, stdout, stderr) => {
         if (error) {
             res.status(500).json({ error: 'Failed to retrieve kernel modules' });
             return;
         }
-        res.json({ modules: stdout });
+
+        // Split the stdout by newlines and format it into an array of objects
+        const lines = stdout.split('\n');
+        const modules = lines.slice(2) // Skip the header lines
+            .map(line => {
+                const [name, size, used, by] = line.trim().split(/\s+/);
+                return {
+                    name,
+                    size,
+                    used,
+                    by,
+                };
+            });
+
+        // Send the array of module objects as a JSON response
+        res.json({ modules });
     });
 });
 
@@ -51,7 +67,30 @@ app.get('/boot-info', (req, res) => {
             res.status(500).json({ error: 'Failed to retrieve boot information' });
             return;
         }
-        res.json({ bootInfo: stdout });
+
+        // Split the `stdout` by newlines to convert it into an array of lines
+        const lines = stdout.split('\n');
+
+        // Create an array of boot information objects with key-value pairs
+        const bootInfo = [];
+        let currentInfo = {};
+
+        lines.forEach((line) => {
+            const [key, ...value] = line.split(': ');
+            const formattedLine = value.join(': ');
+
+            if (key && formattedLine) {
+                currentInfo[key] = formattedLine;
+            } else {
+                if (Object.keys(currentInfo).length > 0) {
+                    bootInfo.push(currentInfo);
+                    currentInfo = {};
+                }
+            }
+        });
+
+        // Send the boot information as JSON
+        res.json({ bootInfo });
     });
 });
 
@@ -129,14 +168,20 @@ app.get('/gpu-info', (req, res) => {
             return;
         }
 
-        const gpuInfo = stdout.trim().split('\n').map((line) => line.trim());
+        const gpuInfo = stdout.trim().split('\n').map((line) => {
+            const [pci, info] = line.split(': ');
+            return { pci, info };
+        });
 
         res.json({ gpuInfo });
     });
 });
 
 app.get('/environment-variables', (req, res) => {
-    const environmentVariables = process.env;
+    const environmentVariables = Object.entries(process.env).map(([key, value]) => ({
+        name: key,
+        value: value
+    }));
     res.json({ environmentVariables });
 });
 
@@ -223,9 +268,19 @@ app.get('/battery', (req, res) => {
             return;
         }
 
-        // You can parse the 'stdout' as needed to extract specific battery information.
-        // Example: Battery status, charge percentage, etc.
-        res.json({ battery: stdout });
+        const lines = stdout.split('\n');
+        const batteryInfo = {};
+
+        // Iterate through the lines of the output
+        for (const line of lines) {
+            // Split each line by ':' to separate key and value
+            const [key, value] = line.split(':').map(part => part.trim());
+            
+            // Store key-value pairs in the batteryInfo object
+            batteryInfo[key] = value;
+        }
+
+        res.json({ battery: batteryInfo });
     });
 });
 
@@ -236,9 +291,31 @@ app.get('/sensors', (req, res) => {
             return;
         }
 
-        // You can parse 'stdout' as needed to extract sensor data.
-        // Example: Temperature readings, fan speeds, etc.
-        res.json({ sensorData: stdout });
+        // Split the 'stdout' by blank lines to separate sensor sections
+        const sensorSections = stdout.split(/\n\s*\n/);
+
+        // Create an array to store sensor data
+        const sensorData = [];
+
+        // Process each sensor section
+        sensorSections.forEach((section) => {
+            const sensorInfo = {};
+
+            // Split each section by lines and extract data
+            section.split('\n').forEach((line) => {
+                const parts = line.split(':');
+                if (parts.length === 2) {
+                    const key = parts[0].trim();
+                    const value = parts[1].trim();
+                    sensorInfo[key] = value;
+                }
+            });
+
+            // Push sensor data to the array
+            sensorData.push(sensorInfo);
+        });
+
+        res.json({ sensorData });
     });
 });
 
@@ -344,10 +421,25 @@ app.get('/routing-table', (req, res) => {
             return;
         }
 
-        const routingTable = stdout
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0);
+        // Split the 'stdout' into lines, excluding empty lines
+        const lines = stdout.trim().split('\n').filter(line => line.trim() !== '');
+
+        // Create an array to store routing table entries
+        const routingTable = [];
+
+        // Iterate through each line to parse and format the routing table entries
+        lines.forEach((line) => {
+            const [destination, via, dev] = line.split(' ');
+
+            // Create a structured entry for the routing table
+            const entry = {
+                destination: destination,
+                via: via,
+                dev: dev
+            };
+
+            routingTable.push(entry);
+        });
 
         res.json({ routingTable });
     });
@@ -360,10 +452,25 @@ app.get('/arp-table', (req, res) => {
             return;
         }
 
-        const arpTable = stdout
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0);
+        // Split the 'stdout' into lines, excluding empty lines
+        const lines = stdout.trim().split('\n').filter(line => line.trim() !== '');
+
+        // Create an array to store ARP table entries
+        const arpTable = [];
+
+        // Iterate through each line to parse and format the ARP table entries
+        lines.forEach((line) => {
+            const [ipAddress, macAddress, device] = line.split(' ').filter(Boolean);
+
+            // Create a structured entry for the ARP table
+            const entry = {
+                ipAddress: ipAddress,
+                macAddress: macAddress,
+                device: device
+            };
+
+            arpTable.push(entry);
+        });
 
         res.json({ arpTable });
     });
@@ -381,12 +488,11 @@ app.get('/dns-servers', (req, res) => {
             .split('\n')
             .map((line) => line.trim())
             .filter((line) => line.startsWith('nameserver'))
-            .map((line) => line.split(' ')[1]);
+            .map((line) => ({ 'dnsServer': line.split(' ')[1] }));
 
-        res.json({ dnsServers });
+        res.json(dnsServers);
     });
 });
-
 
 app.get('/network-statistics', (req, res) => {
     exec('netstat -i', (error, stdout, stderr) => {

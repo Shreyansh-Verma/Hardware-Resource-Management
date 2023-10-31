@@ -20,6 +20,7 @@ function getOS(inputString) {
 function SystemInfo() {
     const [systemInfo, setSystemInfo] = useState(null);
     const [osInfo, setOsInfo] = useState(null);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         const fetchSystemInfo = () => {
@@ -50,12 +51,20 @@ function SystemInfo() {
     }, []);
 
     return (
-        <div class="m-auto mt-2 max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <div class="max-h-[50vh] overflow-auto m-auto mt-2 max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
             <a href="#">
                 <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-blue-500">System Information</h5>
             </a>
+
+            <button
+                className="text-blue-500 cursor-pointer"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                {isExpanded ? '▼' : '▶'}
+            </button>
+
             {
-                (systemInfo && osInfo) ?
+                (isExpanded && systemInfo && osInfo) ?
                     <div className="text-gray-800 dark:text-white text-left">
                         <p className="mb-2">
                             <span className="font-semibold text-blue-500">Model:</span> {systemInfo.cpus[0].model}
