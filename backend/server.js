@@ -1,9 +1,12 @@
+require('dotenv').config();
 const express = require('express')
 const os = require('os');
 const fs = require('fs');
 const { exec } = require('child_process');
+const WebSocket = require('ws');
 const app = express();
 const port = 5000;
+const mongoose = require('mongoose');
 
 const cors = require('cors');
 app.use(cors());
@@ -123,7 +126,7 @@ app.get('/users', (req, res) => {
 
         const users = data
             .split('\n')
-            .map((line) => {
+            .map((line) => { 
                 const [username, , uid, gid, fullName, homeDir, shell] = line.split(':');
                 return { username, uid, gid, fullName, homeDir, shell };
             });
@@ -544,6 +547,83 @@ app.get('/shared-directories', (req, res) => {
     });
 });
 
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+
+// wss.on('connection', (ws) => {
+//     console.log('Agent connected.');
+  
+//     ws.on('message', (message) => {
+//       try {
+//         const data = JSON.parse(message);
+//         console.log('Received hardware information from agent:', data);
+//         // Process and store the received hardware information as needed
+//       } catch (error) {
+//         console.error('Error parsing message:', error.message);
+//       }
+//     });
+  
+//     ws.on('close', () => {
+//       console.log('Agent disconnected.');
+//     });
+//   });
+  
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+
+const agentSchema = new mongoose.Schema({
+  name: String,
+  cpu: [{ model: String, speed: Number }],
+  gpu: [{ description: String, product: String, vendor: String }],
+  memory: String,
+});
+
+const Agent = mongoose.model('agentData', agentSchema);
+
+wss.on('connection', (ws) => {
+  console.log('Agent connected.');
+
+  ws.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('Received hardware information from agent:', data);
+
+      if (data.name) {
+        const agent = await Agent.findOneAndUpdate(
+          { name: data.name },
+          { $set: { ...data } },
+          { upsert: true, new: true }
+        );
+        console.log('Data stored/updated in MongoDB:', agent);
+      } else {
+        console.error('Agent name not provided.');
+      }
+    } catch (error) {
+      console.error('Error parsing message:', error.message);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('Agent disconnected.');
+  });
+});
+
+
+app.get('/api/agents', async (req, res) => {
+    try {
+      const agents = await Agent.find({}); // Retrieve all data from the collection
+        console.log("request receive");
+      // Send the retrieved data as a response
+      res.status(200).json({ success: true, agents });
+    } catch (error) {
+      // Handle errors
+      res.status(500).json({ success: false, message: 'Server Error bro' });
+    }
+  });
 
 app.get('/benchmark-cpu', (req, res) => {
     // Your existing CPU benchmark route
