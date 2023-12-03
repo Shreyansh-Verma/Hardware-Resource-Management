@@ -5,11 +5,19 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const WebSocket = require('ws');
 const app = express();
-const port = 5000;
 const mongoose = require('mongoose');
+const http = require('http');
 
 const cors = require('cors');
 app.use(cors());
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('HTTP server is working!');
+  });
+  
+  // Upgrade the HTTP server to a WebSocket server
+//   const wss = new WebSocket.Server({ server });
 
 app.get('/system-info', (req, res) => {
     try {
@@ -548,27 +556,8 @@ app.get('/shared-directories', (req, res) => {
 });
 
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ server });
 
-
-// wss.on('connection', (ws) => {
-//     console.log('Agent connected.');
-  
-//     ws.on('message', (message) => {
-//       try {
-//         const data = JSON.parse(message);
-//         console.log('Received hardware information from agent:', data);
-//         // Process and store the received hardware information as needed
-//       } catch (error) {
-//         console.error('Error parsing message:', error.message);
-//       }
-//     });
-  
-//     ws.on('close', () => {
-//       console.log('Agent disconnected.');
-//     });
-//   });
-  
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -580,6 +569,7 @@ const agentSchema = new mongoose.Schema({
   cpu: [{ model: String, speed: Number }],
   gpu: [{ description: String, product: String, vendor: String }],
   memory: String,
+  lastFetched: { type: Date, default: Date.now } // Field to store the last fetched timestamp
 });
 
 const Agent = mongoose.model('agentData', agentSchema);
@@ -648,6 +638,12 @@ app.get('/gpu-info', (req, res) => {
 app.get('/cpu-info', (req, res) => {
     res.send('Hello World!')
 })
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+// httpServer.on('upgrade', (req, socket, head) => {
+//     wsServer.handleUpgrade(req, socket, head, (ws) => {
+//       wsServer.emit('connection', ws, req)
+//     })
+// });

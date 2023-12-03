@@ -4,7 +4,7 @@ const os = require('os');
 
 const machineName = os.hostname(); // Fetch the machine name dynamically
 
-const ws = new WebSocket('ws://localhost:8080');
+const ws = new WebSocket('ws://localhost:5000');
 
 ws.on('open', () => {
   console.log('Agent connected to central server.');
@@ -26,6 +26,7 @@ ws.on('open', () => {
       cpu: cpuInfo,
       gpu: gpuInfo,
       memory: memoryInfo,
+      lastFetched: new Date()
     };
 
     ws.send(JSON.stringify(hardwareInfo)); // Send CPU, GPU, and memory info along with the machine name to central server

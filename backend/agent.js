@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const { exec } = require('child_process');
 const os = require('os');
 
-const ws = new WebSocket('ws://localhost:8080'); // WebSocket connection to central server
+const ws = new WebSocket('ws://localhost:5000'); // WebSocket connection to central server
 
 ws.on('open', () => {
   console.log('Agent connected to central server.');
