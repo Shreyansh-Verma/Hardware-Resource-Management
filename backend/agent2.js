@@ -4,7 +4,7 @@ const os = require('os');
 
 const machineName = os.hostname(); // Fetch the machine name dynamically
 
-const ws = new WebSocket('wss://dfs-backend.onrender.com');
+const ws = new WebSocket('ws://localhost:5000');
 
 ws.on('open', () => {
   console.log('Agent connected to central server.');

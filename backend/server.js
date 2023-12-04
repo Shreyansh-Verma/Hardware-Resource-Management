@@ -11,10 +11,10 @@ const http = require('http');
 const cors = require('cors');
 app.use(cors());
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('HTTP server is working!');
-  });
+// const server = http.createServer((req, res) => {
+//     res.writeHead(200, { 'Content-Type': 'text/plain' });
+//     res.end('HTTP server is working!');
+//   });
   
   // Upgrade the HTTP server to a WebSocket server
 //   const wss = new WebSocket.Server({ server });
@@ -555,6 +555,21 @@ app.get('/shared-directories', (req, res) => {
     });
 });
 
+app.get('/api/agents', async (req, res) => {
+    console.log("enter");
+    try {
+      const agents = await Agent.find({}); // Retrieve all data from the collection
+        console.log("request receive");
+      // Send the retrieved data as a response
+      res.status(200).json({ success: true, agents });
+    } catch (error) {
+      // Handle errors
+      res.status(500).json({ success: false, message: 'Server Error bro' });
+    }
+  });
+
+  const server = http.createServer(app);
+
 
 const wss = new WebSocket.Server({ server });
 
@@ -603,17 +618,7 @@ wss.on('connection', (ws) => {
 });
 
 
-app.get('/api/agents', async (req, res) => {
-    try {
-      const agents = await Agent.find({}); // Retrieve all data from the collection
-        console.log("request receive");
-      // Send the retrieved data as a response
-      res.status(200).json({ success: true, agents });
-    } catch (error) {
-      // Handle errors
-      res.status(500).json({ success: false, message: 'Server Error bro' });
-    }
-  });
+
 
 app.get('/benchmark-cpu', (req, res) => {
     // Your existing CPU benchmark route
@@ -642,8 +647,3 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-// httpServer.on('upgrade', (req, socket, head) => {
-//     wsServer.handleUpgrade(req, socket, head, (ws) => {
-//       wsServer.emit('connection', ws, req)
-//     })
-// });
