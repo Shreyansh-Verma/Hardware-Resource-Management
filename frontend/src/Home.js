@@ -42,7 +42,7 @@ function Home() {
     return (
         <div className='m-auto bg-indigo-950'>
             <div>
-                <Navbar />
+                <Navbar currentTab = 'Home'/>
             </div>
             <h1 className='text-white text-2xl font-bold m-auto ml-4 mb-4 mt-4'> Computer</h1>
             <div className="bg-indigo-950 grid grid-cols-5 gap-4  overflow-y-auto overflow-x-hidden ml-4 mr-4 ">
