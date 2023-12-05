@@ -3,6 +3,9 @@ import Navbar from "./Navbar";
 
 export default function Dashboard() {
   const [agents, setAgents] = useState([]);
+  const [pressStates, setPressStates] = useState([]);
+  const [pressStates2, setPressStates2] = useState([]);
+
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -14,7 +17,9 @@ export default function Dashboard() {
 
         const data = await response.json();
         console.log('data - ', data.agents);
-        setAgents(data.agents); // Assuming the API returns an array of agents
+        setAgents(data.agents);
+        // Initialize press states for each agent, initially set to false
+        setPressStates(Array(data.agents.length).fill(false));
       } catch (error) {
         console.error("Error fetching agents:", error.message);
       }
@@ -22,6 +27,21 @@ export default function Dashboard() {
 
     fetchAgents();
   }, []); // The empty dependency array ensures the effect runs only once on component mount
+
+  const togglePress = (index) => {
+    setPressStates((prevPressStates) => {
+      const newPressStates = [...prevPressStates];
+      newPressStates[index] = !newPressStates[index];
+      return newPressStates;
+    });
+  };
+  const togglePress2 = (index) => {
+    setPressStates2((prevPressStates) => {
+      const newPressStates = [...prevPressStates];
+      newPressStates[index] = !newPressStates[index];
+      return newPressStates;
+    });
+  };
 
   return (
     <div className="m-auto bg-indigo-950">
@@ -36,19 +56,63 @@ export default function Dashboard() {
                   Device Name
                 </th>
                 <th scope="col" className="px-6 py-3">
-                  Memory
+                  GPU
                 </th>
                 <th scope="col" className="px-6 py-3">
-                  CPU Model
+                  CPU
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Memory
                 </th>
               </tr>
             </thead>
             <tbody>
-              {agents.map((agent) => (
+              {agents.map((agent, index) => (
                 <tr key={agent._id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                   <td className="px-6 py-4">{agent.name}</td>
-                  <td className="px-6 py-4">{agent.memory}</td>
-                  <td className="px-6 py-4">{agent.cpu[0].model}</td>
+                  <td className="px-6 py-4">
+                    {pressStates2[index] == false ? (
+                      <>
+                      {agent.gpu.map((gpu, cpuIndex) => (
+                        <div key={cpuIndex} className="flex flex-col">
+                          <span className="px-6 py-4">Description - {gpu.description}</span>
+                          <span className="px-6 py-4">Product - {gpu.product}</span>
+                          <span className="px-6 py-4">Vendor - {gpu.vendor}</span>
+                        </div>
+                      ))}
+                        <button className = "bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded" 
+                      onClick={() => togglePress2(index)}>View Less</button>
+                      </>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span className="px-6 py-4">{agent.gpu[0].description}</span>
+                        <button className = "bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded max-w-[100px]" 
+                        onClick={() => togglePress2(index)}>View All</button>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {pressStates[index] ? (
+                      <>
+                      {agent.cpu.map((cpu, cpuIndex) => (
+                        <div key={cpuIndex} className="flex flex-col">
+                          <span className="px-6 py-4">{cpu.model} - {cpu.speed}</span>
+                        </div>
+                      ))}
+                        <button className = "bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded" 
+                      onClick={() => togglePress(index)}>View Less</button>
+                      </>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span className="px-6 py-4">{agent.cpu[0].model} - {agent.cpu[0].speed}</span>
+                        <button className = "bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded max-w-[100px]" 
+                        onClick={() => togglePress(index)}>View All</button>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                      {agent.memory}
+                  </td>
                 </tr>
               ))}
             </tbody>
