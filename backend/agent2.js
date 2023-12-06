@@ -5,6 +5,8 @@ const os = require('os');
 const machineName = os.hostname(); // Fetch the machine name dynamically
 
 const ws = new WebSocket('wss://dfs-backend.onrender.com');
+// const ws = new WebSocket('ws://localhost:5000'); // WebSocket connection to central server
+
 
 ws.on('open', () => {
   console.log('Agent connected to central server.');
@@ -23,8 +25,8 @@ ws.on('open', () => {
 
     const hardwareInfo = {
       name: machineName, // Include the machine name dynamically
-      cpu: cpuInfo,
-      gpu: gpuInfo,
+      cpu: cpuInfo.map(cpu => ({ ...cpu, isAvailable: cpu.isAvailable })), // Initialize availability status
+      gpu: gpuInfo.map(gpu => ({ ...gpu, isAvailable: false })), // Initialize availability status
       memory: memoryInfo,
       lastFetched: new Date()
     };
@@ -36,6 +38,17 @@ ws.on('open', () => {
   setInterval(sendHardwareInfo, 30000);
 });
 
+
+ws.on('message', (message) => {
+  try {
+    const receivedData = JSON.parse(message);
+    console.log('Received message from the server:', receivedData);
+    // Handle received data here as needed
+  } catch (error) {
+    console.error('Error parsing incoming message:', error);
+  }
+});
+
 ws.on('close', () => {
   console.log('Connection to central server closed.');
 });
@@ -43,10 +56,20 @@ ws.on('close', () => {
 // Function to get CPU information
 function getCPUInfo() {
   const cpus = os.cpus();
-  const cpuDetails = cpus.map(core => ({ model: core.model, speed: core.speed }));
+  const cpuDetails = cpus.map(core => {
+    const idleTime = core.times.idle;
+    const totalTime = Object.values(core.times).reduce((acc, val) => acc + val, 0);
+    const idlePercentage = (idleTime / totalTime) * 100;
+    console.log("idle percentage = ",idlePercentage);
+    return {
+      model: core.model,
+      speed: core.speed,
+      idlePercentage: idlePercentage.toFixed(2), // Idle percentage to two decimal places
+      isAvailable: idlePercentage > 80 // Set availability status based on idle percentage threshold
+    };
+  });
   return cpuDetails;
 }
-
 // Function to parse GPU information
 function parseGpuInfo(rawInfo) {
   const gpuInfoArray = [];
