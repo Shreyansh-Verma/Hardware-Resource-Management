@@ -1,0 +1,74 @@
+from collections import defaultdict, deque
+
+class UserGraph:
+    def __init__(self):
+        self.graph = defaultdict(set)
+
+    def add_edge(self, user1, user2):
+        self.graph[user1].add(user2)
+        self.graph[user2].add(user1)
+
+    def min_distance(self, start_user, end_user):
+        if start_user not in self.graph or end_user not in self.graph:
+            return -1
+
+        visited = set()
+        queue = deque([(start_user, 0)])
+
+        while queue:
+            user, distance = queue.popleft()
+            if user == end_user:
+                return distance
+
+            visited.add(user)
+            for neighbor in self.graph[user]:
+                if neighbor not in visited:
+                    queue.append((neighbor, distance + 1))
+
+        return -1
+    def printGraph():
+        print(self.graph)
+
+def parse_event_data(input_events):
+    user_graph = UserGraph()
+
+    for event_string in input_events:
+        parts = event_string.split("||")
+        user_name = parts[0]
+        new_followers = parts[3] if parts[3] else []
+        new_followees = parts[4] if parts[4] else []
+        print("elem - ",new_followers)
+        print("elem2 = ", new_followees)
+
+        for follower in new_followers:
+            for followee in new_followees:
+                if follower and followee:
+                    if follower!="":
+                        user_graph.add_edge(user_name, follower)
+                        user_graph.add_edge(follower, user_name )
+
+
+                        user_graph.add_edge(followee,follower)
+
+    return user_graph
+
+def main():
+    input_events = [
+        "Alice||post1#hashtag1||2023-12-06 08:30:00||Bob||",
+        "Bob||post2#hashtag2||2023-12-06 09:45:00||Alice||",
+        # Add more input events here
+    ]
+
+    user_graph = parse_event_data(input_events)
+
+    start_user = "Alice"
+    end_user = "Bob"
+
+    distance = user_graph.min_distance(start_user, end_user)
+    if distance != -1:
+        print(f"The minimum distance from {start_user} to {end_user} is {distance} steps.")
+    else:
+        print(f"It's not possible to reach from {start_user} to {end_user}.")
+
+if __name__ == "__main__":
+    main()

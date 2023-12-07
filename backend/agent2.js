@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const { execSync } = require('child_process');
+const { exec } = require('child_process');
 const os = require('os');
 
 const machineName = os.hostname(); // Fetch the machine name dynamically
@@ -17,12 +17,11 @@ ws.on('open', () => {
 
     let gpuInfo = 'N/A'; // Placeholder for GPU info
     try {
-      const rawGpuInfo = execSync('sudo lshw -C display').toString();
+      const rawGpuInfo = exec('sudo lshw -C display').toString();
       gpuInfo = parseGpuInfo(rawGpuInfo);
     } catch (error) {
       console.error(`Error fetching GPU info: ${error.message}`);
     }
-
     const hardwareInfo = {
       name: machineName, // Include the machine name dynamically
       cpu: cpuInfo.map(cpu => ({ ...cpu, isAvailable: cpu.isAvailable })), // Initialize availability status
@@ -42,12 +41,62 @@ ws.on('open', () => {
 ws.on('message', (message) => {
   try {
     const receivedData = JSON.parse(message);
-    console.log('Received message from the server:', receivedData);
-    // Handle received data here as needed
+    const receivedContent = JSON.parse(receivedData.task);
+    console.log('Received content:', receivedContent);
+
+    if (receivedContent.fileType === 'python') {
+      executePython(receivedContent.task.fileContent);
+    } else if (receivedContent.task.fileType === 'cpp') {
+      executeCpp(receivedContent.task.fileContent);
+    } else if (receivedContent.task.fileType === 'javascript') {
+      executeJavascript(receivedContent.task.fileContent);
+    } else {
+      console.log('Unsupported file type:', receivedContent.task.fileType);
+    }
   } catch (error) {
     console.error('Error parsing incoming message:', error);
   }
 });
+
+function executePython(code) {
+  // Run Python code
+  // For example:
+  exec(`python3 -c "${code}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing Python code: ${error}`);
+      return;
+    }
+    console.log('Python output:', stdout);
+  });
+}
+
+function executeCpp(code) {
+  // Run C++ code
+  // For example:
+  exec(`g++ -o output.out -xc++ - <<< "${code}" && ./output.out`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing C++ code: ${error}`);
+      return;
+    }
+    console.log('C++ output:', stdout);
+  });
+}
+
+function executeJavascript(code) {
+  // Execute JavaScript code
+  // Use eval to execute JavaScript code (use with caution)
+  // For example:
+  try {
+    eval(code);
+  } catch (error) {
+    console.error(`Error executing JavaScript code: ${error}`);
+  }
+}
+
+function sendResult(result) {
+  // Send the result back to the main server through the WebSocket
+  ws.send(JSON.stringify({ result }));
+}
 
 ws.on('close', () => {
   console.log('Connection to central server closed.');
