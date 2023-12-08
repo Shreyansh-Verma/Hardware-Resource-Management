@@ -214,6 +214,7 @@ const agentSchema = new mongoose.Schema({
   cpu: [{
     model: String,
     speed: Number,
+    idlePercentage: String,
     isAvailable: { type: Boolean} // Field to denote CPU availability
   }],
   gpu: [{
