@@ -119,7 +119,7 @@ app.post('/upload-file-rabbitmq', upload.single('file'), async (req, res) => {
       if (availableCPUs.length > 0) {
         const cpuToSend = availableCPUs[0]; // Assuming sending to the first available CPU
         console.log('CPU to send task:', cpuToSend.name);
-
+        
         channel.sendToQueue(
           'taskQueue',
           Buffer.from(JSON.stringify({clientId:clientId,  fileType:fileType , task, cpuName: cpuToSend.name })),
@@ -281,34 +281,25 @@ wss.on('connection', (ws) => {
    
   ws.on('close', async() => {
     console.log('WebSocket connection closed.');
-    // Find and delete the WebSocket entry from the map when the connection is closed
-    // if(clients.has(ws))
-    // {
-    //   clients.delete(ws);
-    // }
-    // if (socketName.has(ws))
-    // {
-    //   agents.delete(socketName.get(ws));  
-    // }
       // Delete the entry from the database based on the name
       if (socketName.has(ws))
       {
-  try {
-    console.log("name = ", socketName.get(ws));
-    const deletedAgent = await Agent.findOneAndDelete({ name: socketName.get(ws) });
+        try {
+          console.log("name = ", socketName.get(ws));
+          const deletedAgent = await Agent.findOneAndDelete({ name: socketName.get(ws) });
 
-    if (!deletedAgent) {
-      console.log(`Agent '' not found in the database.`);
-    } else {
-      console.log(`Agent '' has been removed from the database.`);
-    }
-    
-    // Remove from the agents Map (assuming agents is a Map)
-    agents.delete(socketName.get(ws));
-  } catch (error) {
-    console.error('Error deleting agent from the database:', error);
-  }
-}
+          if (!deletedAgent) {
+            console.log(`Agent '' not found in the database.`);
+          } else {
+            console.log(`Agent '' has been removed from the database.`);
+          }
+          
+          // Remove from the agents Map (assuming agents is a Map)
+          agents.delete(socketName.get(ws));
+        } catch (error) {
+          console.error('Error deleting agent from the database:', error);
+        }
+      }
   });
 
 });
@@ -349,6 +340,12 @@ async function allocateCPUsToTasksRabbit() {
         console.log("Enter = ",taskFromQueue)
         const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
         console.log('Allocating task from queue to CPU:', cpuToSend.name);
+        console.log("taskFromQueue = ", taskFromQueue);
+        if(clients.has(taskFromQueue.clientId))
+        {
+          console.log("tasks = ",cpuToSend.name);
+          clients.get(taskFromQueue.clientId).send(JSON.stringify({ machine: cpuToSend.name}));
+        }
 
         // Assuming 'agents' is a Map or an object where agents are stored by name
         const wsToSend = agents.get(cpuToSend.name); // Get the WebSocket for the CPU
@@ -393,7 +390,12 @@ async function allocateCPUsToTasks() {
         if (availableCPUs.length > 0) {
           const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
           console.log('Allocating task from queue to CPU:', cpuToSend.name);
-
+          if(clients.has(taskFromQueue.clientId))
+          {
+            console.log("tasks = ",cpuToSend.name);
+            clients.get(taskFromQueue.clientId).send(JSON.stringify({ machine: cpuToSend.name}));
+          }
+  
           const wsToSend = agents.get(cpuToSend.name); // Get the WebSocket for the CPU
 
           if (wsToSend) {
