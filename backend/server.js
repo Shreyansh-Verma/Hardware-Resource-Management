@@ -379,35 +379,34 @@ app.delete('/deallocate/:name', async (req, res) => {
 
 async function allocateCPUsToTasks() {
   try {
-    // Assume there's a method to fetch tasks from the queue
-    const taskFromQueue = await taskQueue.fetchTask();
-    console.log("Task from queue = ", taskFromQueue);
+    const response = await getAvailableCPUs();
+    if (response.success) {
+      const { availableCPUs } = response;
+      if (availableCPUs.length > 0) {
+        const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
+        console.log('Available CPUs:', availableCPUs.length);
+        console.log('Allocating task to CPU:', cpuToSend.name);
 
-    if (taskFromQueue) {
-      const response = await getAvailableCPUs();
-      if (response.success) {
-        const { availableCPUs } = response;
-        if (availableCPUs.length > 0) {
-          const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
-          console.log('Allocating task from queue to CPU:', cpuToSend.name);
-          if(clients.has(taskFromQueue.clientId))
-          {
-            console.log("tasks = ",cpuToSend.name);
-            clients.get(taskFromQueue.clientId).send(JSON.stringify({ machine: cpuToSend.name}));
+        const taskFromQueue = await taskQueue.fetchTask();
+        if (taskFromQueue) {
+          if (clients.has(taskFromQueue.clientId)) {
+            clients.get(taskFromQueue.clientId).send(JSON.stringify({ machine: cpuToSend.name }));
           }
-  
-          const wsToSend = agents.get(cpuToSend.name); // Get the WebSocket for the CPU
 
+          const wsToSend = agents.get(cpuToSend.name);
           if (wsToSend) {
-            wsToSend.send(JSON.stringify({ task: taskFromQueue })); // Sending task to the WebSocket associated with the CPU name
+            wsToSend.send(JSON.stringify({ task: taskFromQueue }));
           }
         }
+      } else {
+        console.log('No available CPUs');
       }
     }
   } catch (error) {
     console.error('Error allocating CPUs to tasks:', error.message);
   }
 }
+
 
 async function fetchTaskFromQueue() {
   try {

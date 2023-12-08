@@ -61,21 +61,6 @@ ws.on('message', (message) => {
   }
 });
 
-// function executePython(code, id) {
-//   // Run Python code
-//   // For example:
-//   execSync(`python3 -c "${code}"`, (error, stdout, stderr) => {
-//     if (error) {
-//       console.log("enter here in error");
-//       console.error(`Error executing Python code: ${error}`);
-//       sendResult(error, id);
-//       return;
-//     }
-//     console.log('Python output:', stdout);
-//     sendResult(stdout, id);
-//   });
-// }
-
 function executePython(code, id) {
   try {
     const stdout = execSync(`python3 -c "${code}"`).toString();
