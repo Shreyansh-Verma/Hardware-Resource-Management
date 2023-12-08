@@ -23,9 +23,10 @@ ws.on('open', () => {
       console.error(`Error fetching GPU info: ${error.message}`);
     }
     const hardwareInfo = {
+      infoType: "hardwareInfo",
       name: machineName, // Include the machine name dynamically
-      cpu: cpuInfo.map(cpu => ({ ...cpu, isAvailable: cpu.isAvailable })), // Initialize availability status
-      gpu: gpuInfo.map(gpu => ({ ...gpu, isAvailable: false })), // Initialize availability status
+      cpu: cpuInfo.map(cpu => ({ ...cpu, isAvailable: cpu.isAvailable , idlePercentage: cpu.idlePercentage + '%' })), // Initialize availability status
+      gpu: gpuInfo.map(gpu => ({ ...gpu, isAvailable: true })), // Initialize availability status
       memory: memoryInfo,
       lastFetched: new Date()
     };
@@ -40,12 +41,11 @@ ws.on('open', () => {
 
 ws.on('message', (message) => {
   try {
-    const receivedData = JSON.parse(message);
-    const receivedContent = JSON.parse(receivedData.task);
-    console.log('Received content:', receivedContent);
-
-    if (receivedContent.fileType === 'python') {
-      executePython(receivedContent.task.fileContent);
+    const receivedContent = JSON.parse(message);
+    console.log("received Data = ", receivedContent);
+    console.log("id = ,",receivedContent.task.clientId)
+    if (receivedContent.task.fileType === 'python') {
+      executePython(receivedContent.task.fileContent, receivedContent.task.clientId);
     } else if (receivedContent.task.fileType === 'cpp') {
       executeCpp(receivedContent.task.fileContent);
     } else if (receivedContent.task.fileType === 'javascript') {
@@ -58,15 +58,17 @@ ws.on('message', (message) => {
   }
 });
 
-function executePython(code) {
+function executePython(code, id) {
   // Run Python code
   // For example:
   exec(`python3 -c "${code}"`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing Python code: ${error}`);
+      sendResult(error, id);
       return;
     }
     console.log('Python output:', stdout);
+    sendResult(stdout, id);
   });
 }
 
@@ -79,6 +81,7 @@ function executeCpp(code) {
       return;
     }
     console.log('C++ output:', stdout);
+    sendResult(stdout);
   });
 }
 
@@ -93,9 +96,13 @@ function executeJavascript(code) {
   }
 }
 
-function sendResult(result) {
+function sendResult(result, id) {
   // Send the result back to the main server through the WebSocket
-  ws.send(JSON.stringify({ result }));
+  ws.send(JSON.stringify({
+    infoType: "outputInfo",
+    clientId: id,
+    result 
+  }));
 }
 
 ws.on('close', () => {

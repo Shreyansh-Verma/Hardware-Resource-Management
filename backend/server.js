@@ -13,6 +13,7 @@ const multer = require('multer');
 app.use(cors());
 const agents = new Map();
 const socketName = new Map();
+const clients = new Map();
 const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 const rabbitmqConnectionString = 'amqp://localhost'; // Update with your RabbitMQ connection string
 
@@ -47,15 +48,65 @@ async function clearQueue(queueName) {
 }
 
 // Call the function to clear a queue
-clearQueue('taskQueue');
+// clearQueue('taskQueue');
 
-connectToQueue(); // Call this function to establish the connection
+// connectToQueue(); // Call this function to establish the connection
 
-app.post('/upload-file', upload.single('file'), async (req, res) => {
+class TaskQueue {
+  constructor() {
+    this.queue = [];
+    this.mutex = false;
+  }
+
+  async enqueue(task) {
+    await this.acquireLock();
+    this.queue.push(task);
+    this.releaseLock();
+    // this.processQueue();
+  }
+
+  async acquireLock() {
+    while (this.mutex) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Adjust the delay as needed
+    }
+    this.mutex = true;
+  }
+
+  releaseLock() {
+    this.mutex = false;
+  }
+
+  async fetchTask() {
+    if (this.mutex) return null;
+
+    this.mutex = true;
+    const task = this.queue.shift();
+    this.mutex = false;
+
+    if (task) {
+      console.log('Received task:', task);
+      // Process the task...
+      return task;
+    } else {
+      console.log('No task found.');
+      return null;
+    }
+  }
+}
+
+
+const taskQueue = new TaskQueue();
+
+// Function to generate a unique identifier
+function generateClientId() {
+  return Math.random().toString(36).substr(2, 9); // Example: Generates a random 9-character string
+}
+
+app.post('/upload-file-rabbitmq', upload.single('file'), async (req, res) => {
   
   try {
     const fileType  = req.body.fileType; // Assuming fileType is sent from the frontend
-
+    const clientId = req.body.clientId;
     const filePath = req.file.path; // Path to the uploaded file
     const fileContent = fs.readFileSync(filePath, 'utf-8'); // Read file content
     fs.unlinkSync(filePath); // Delete the uploaded file after reading its content
@@ -70,7 +121,7 @@ app.post('/upload-file', upload.single('file'), async (req, res) => {
 
         channel.sendToQueue(
           'taskQueue',
-          Buffer.from(JSON.stringify({ fileType:fileType , task, cpuName: cpuToSend.name })),
+          Buffer.from(JSON.stringify({clientId:clientId,  fileType:fileType , task, cpuName: cpuToSend.name })),
           { persistent: true }
         );
 
@@ -87,6 +138,23 @@ app.post('/upload-file', upload.single('file'), async (req, res) => {
   }
 });
 
+app.post('/upload-file', upload.single('file'), async (req, res) => {
+  try {
+    const fileType = req.body.fileType;
+    const filePath = req.file.path;
+    const clientId = req.body.clientId;
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    fs.unlinkSync(filePath);
+    const task = { clientId, fileType, fileContent };
+    
+    await taskQueue.enqueue(task);
+
+    res.status(200).json({ success: true, message: 'Task added to the queue' });
+  } catch (error) {
+    console.error('Error handling file upload:', error.message);
+    res.status(500).json({ success: false, message: 'Error handling file upload' });
+  }
+});
 app.post('/send-task', async (req, res) => {
   const task = 'task'; // Placeholder for the task
 
@@ -162,32 +230,56 @@ const Agent = mongoose.model('agentData', agentSchema);
 
 wss.on('connection', (ws) => {
   console.log('Agent connected.');
+
+  // Generate a unique identifier for the WebSocket connection
+  const clientId = generateClientId();
+  // Store the WebSocket connection using the generated identifier
+  clients.set(clientId, ws);
+  
+  // Send the identifier back to the client
+  ws.send(JSON.stringify({task: {fileType:"NA", clientId: clientId }}));
+
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
       console.log('Received hardware information from agent:', data);
-      if (data.name) {
-        agents.set(data.name, ws);
-        socketName.set(ws,data.name);
-        const agent = await Agent.findOneAndUpdate(
-          { name: data.name },
-          { $set: { ...data } },
-          { upsert: true, new: true }
-        );
-        console.log('Data stored/updated in MongoDB:', agent);
-      } else {
-        console.error('Agent name not provided.');
+      if(data.infoType==="hardwareInfo")
+      {
+        if (data.name) {
+          agents.set(data.name, ws);
+          socketName.set(ws,data.name);
+          const agent = await Agent.findOneAndUpdate(
+            { name: data.name },
+            { $set: { ...data } },
+            { upsert: true, new: true }
+          );
+          console.log('Data stored/updated in MongoDB:', agent);
+        } else {
+          console.error('Agent name not provided.');
+        }
+      }
+      else if (data.infoType === "clientConn")
+      {
+        // console.log("output data = ",data);
+      }
+      else
+      {
+        console.log("output data = ",data); 
+        if(clients.has(data.clientId))
+        {
+          clients.get(data.clientId).send(JSON.stringify({ fileContent: data.result}));
+        }
       }
     } catch (error) {
       console.error('Error parsing message:', error.message);
     }
-  });  
+  }); 
+   
   ws.on('close', () => {
     console.log('WebSocket connection closed.');
     // Find and delete the WebSocket entry from the map when the connection is closed
     if (socketName.has(ws))
     {
-      console.log("socket = ",socketName.get(ws));
       agents.delete(socketName.get(ws));  
     }
   });
@@ -205,7 +297,6 @@ async function getAvailableCPUs() {
   }
 }
 
-
 // Function to get available GPUs
 async function getAvailableGPUs() {
   try {
@@ -217,7 +308,7 @@ async function getAvailableGPUs() {
 }
 
 // Function to allocate available CPUs to queue tasks when CPUs are free
-async function allocateCPUsToTasks() {
+async function allocateCPUsToTasksRabbit() {
   const response = await getAvailableCPUs();
   if (response.success) {
     const { availableCPUs } = response;
@@ -240,6 +331,33 @@ async function allocateCPUsToTasks() {
         }
       }
     }
+  }
+}
+
+async function allocateCPUsToTasks() {
+  try {
+    // Assume there's a method to fetch tasks from the queue
+    const taskFromQueue = await taskQueue.fetchTask();
+    console.log("Task from queue = ", taskFromQueue);
+
+    if (taskFromQueue) {
+      const response = await getAvailableCPUs();
+      if (response.success) {
+        const { availableCPUs } = response;
+        if (availableCPUs.length > 0) {
+          const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
+          console.log('Allocating task from queue to CPU:', cpuToSend.name);
+
+          const wsToSend = agents.get(cpuToSend.name); // Get the WebSocket for the CPU
+
+          if (wsToSend) {
+            wsToSend.send(JSON.stringify({ task: taskFromQueue })); // Sending task to the WebSocket associated with the CPU name
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error allocating CPUs to tasks:', error.message);
   }
 }
 
