@@ -10,12 +10,13 @@ const http = require('http');
 const cors = require('cors');
 const amqp = require('amqplib');
 const multer = require('multer');
-app.use(cors());
 const agents = new Map();
 const socketName = new Map();
 const clients = new Map();
 const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 const rabbitmqConnectionString = 'amqp://localhost'; // Update with your RabbitMQ connection string
+
+app.use(cors());
 
 // Establish connection to RabbitMQ
 let channel; // Declare channel outside to make it accessible to the routes
@@ -278,13 +279,36 @@ wss.on('connection', (ws) => {
     }
   }); 
    
-  ws.on('close', () => {
+  ws.on('close', async() => {
     console.log('WebSocket connection closed.');
     // Find and delete the WebSocket entry from the map when the connection is closed
-    if (socketName.has(ws))
-    {
-      agents.delete(socketName.get(ws));  
+    // if(clients.has(ws))
+    // {
+    //   clients.delete(ws);
+    // }
+    // if (socketName.has(ws))
+    // {
+    //   agents.delete(socketName.get(ws));  
+    // }
+      // Delete the entry from the database based on the name
+      if (socketName.has(ws))
+      {
+  try {
+    console.log("name = ", socketName.get(ws));
+    const deletedAgent = await Agent.findOneAndDelete({ name: socketName.get(ws) });
+
+    if (!deletedAgent) {
+      console.log(`Agent '' not found in the database.`);
+    } else {
+      console.log(`Agent '' has been removed from the database.`);
     }
+    
+    // Remove from the agents Map (assuming agents is a Map)
+    agents.delete(socketName.get(ws));
+  } catch (error) {
+    console.error('Error deleting agent from the database:', error);
+  }
+}
   });
 
 });
@@ -336,6 +360,25 @@ async function allocateCPUsToTasksRabbit() {
     }
   }
 }
+
+// Endpoint to deallocate resources by name
+app.delete('/deallocate/:name', async (req, res) => {
+  const { name } = req.params;
+
+  try {
+    // Find the entry by name and remove it from the database
+    const deletedAgent = await Agent.findOneAndDelete({ name });
+
+    if (!deletedAgent) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Resource deallocated successfully' });
+  } catch (error) {
+    console.error('Error deallocating resource:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
 
 async function allocateCPUsToTasks() {
   try {
