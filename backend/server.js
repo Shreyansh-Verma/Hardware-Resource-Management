@@ -155,6 +155,7 @@ app.post('/upload-file', upload.single('file'), async (req, res) => {
     res.status(500).json({ success: false, message: 'Error handling file upload' });
   }
 });
+
 app.post('/send-task', async (req, res) => {
   const task = 'task'; // Placeholder for the task
 
@@ -235,6 +236,7 @@ wss.on('connection', (ws) => {
   // Generate a unique identifier for the WebSocket connection
   const clientId = generateClientId();
   // Store the WebSocket connection using the generated identifier
+  console.log("Client id = ",clientId);
   clients.set(clientId, ws);
   
   // Send the identifier back to the client
@@ -243,7 +245,7 @@ wss.on('connection', (ws) => {
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
-      console.log('Received hardware information from agent:', data);
+      // console.log('Received hardware information from agent:', data);
       if(data.infoType==="hardwareInfo")
       {
         if (data.name) {
@@ -254,7 +256,7 @@ wss.on('connection', (ws) => {
             { $set: { ...data } },
             { upsert: true, new: true }
           );
-          console.log('Data stored/updated in MongoDB:', agent);
+          // console.log('Data stored/updated in MongoDB:', agent);
         } else {
           console.error('Agent name not provided.');
         }

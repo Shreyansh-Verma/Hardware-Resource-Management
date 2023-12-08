@@ -64,7 +64,7 @@ ws.on('message', (message) => {
 function executePython(code, id) {
   // Run Python code
   // For example:
-  exec(`python3 -c "${code}"`, (error, stdout, stderr) => {
+  execSync(`python3 -c "${code}"`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing Python code: ${error}`);
       sendResult(error, id);
