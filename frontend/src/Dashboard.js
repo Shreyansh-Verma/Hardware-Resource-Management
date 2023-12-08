@@ -1,8 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import Navbar from "./Navbar";
 import FileUploader from "./FileUploader";
 import useWebSocket from 'react-use-websocket';
-import WebSocket from 'ws';
 import FileSaver from "file-saver";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,6 +10,8 @@ const WS_URL = 'wss://dfs-backend.onrender.com';
 
 export default function Dashboard() {
   const notify = (sys) => toast(`File Executed Successfully on ${sys}`);
+  const notify2 = () => toast(`No system loaded yet.`);
+  const notify3 = () => toast(`Systems Loaded Successfully.`);
 
   const [agents, setAgents] = useState([]);
   const [pressStates, setPressStates] = useState([]);
@@ -20,6 +21,9 @@ export default function Dashboard() {
   const [fileName, setFilename] = useState('');
   const [recData, setRecData] = useState('');
   const [machine, setMachine] = useState('');
+  const notify3Called = useRef(false);
+  const notify2Called = useRef(false);
+
 
   const { sendJsonMessage } = useWebSocket(WS_URL, {
     onOpen: () => {
@@ -31,7 +35,6 @@ export default function Dashboard() {
       const blob = new Blob([data.fileContent], { type: "text/plain;charset=utf-8" });
       const uniqueFilename = `output_${Date.now()}_${Math.random().toString(36).substring(2, 10)}.txt`;
 
-      console.log('data - ', data);
       if(data.machine){
         setMachine(data.machine);
       }
@@ -42,37 +45,38 @@ export default function Dashboard() {
         setDataReceived(true);
         FileSaver.saveAs(blob, uniqueFilename);
       }
-      else{
-
-      }
-
       if (data.task && data.task.clientId) {
         setClientId(data.task.clientId);
         console.log('Received clientId from the server:', data.task.clientId);
-
       }
     },
   });
 
   useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const response = await fetch("https://dfs-backend.onrender.com/api/agents");
+    fetch("https://dfs-backend.onrender.com/api/agents")
+      .then((response) => {
         if (!response.ok) {
+          notify2();
           throw new Error("Network response was not ok");
         }
-
-        const data = await response.json();
-        console.log('data - ', data.agents);
+        return response.json();
+      })
+      .then((data) => {
+        if(data.agents.length > 0 && !notify3Called.current){
+          notify3Called.current = true;
+          notify3();
+        }
+        else if(data.agents.length === 0 && !notify2Called.current){
+          notify2Called.current = true;
+          notify2();
+        }
         setAgents(data.agents);
         setPressStates(Array(data.agents.length).fill(false));
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Error fetching agents:", error.message);
-      }
-    };
-
-    fetchAgents();
-  }, []); // The empty dependency array ensures the effect runs only once on component mount
+      });
+  }, []);
 
   const togglePress = (index) => {
     setPressStates((prevPressStates) => {
@@ -92,7 +96,6 @@ export default function Dashboard() {
   return (
     <div className="m-auto bg-indigo-950">
       <Navbar currentTab="Dashboard" />
-      <ToastContainer/>
       <div className="text-white bg-indigo-950 h-screen">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
