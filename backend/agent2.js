@@ -6,8 +6,8 @@ const os = require('os');
 
 const machineName = os.hostname(); // Fetch the machine name dynamically
 
-const ws = new WebSocket('wss://dfs-backend.onrender.com');
-// const ws = new WebSocket('ws://localhost:5000'); // WebSocket connection to central server
+// const ws = new WebSocket('wss://dfs-backend.onrender.com');
+const ws = new WebSocket('ws://localhost:5000'); // WebSocket connection to central server
 
 
 ws.on('open', () => {
@@ -50,9 +50,9 @@ ws.on('message', (message) => {
     if (receivedContent.task.fileType === 'python') {
       executePython(receivedContent.task.fileContent, receivedContent.task.clientId);
     } else if (receivedContent.task.fileType === 'cpp') {
-      executeCpp(receivedContent.task.fileContent);
+      executeCpp(receivedContent.task.fileContent, receivedContent.task.clientId);
     } else if (receivedContent.task.fileType === 'javascript') {
-      executeJavascript(receivedContent.task.fileContent);
+      executeJavascript(receivedContent.task.fileContent, receivedContent.task.clientId);
     } else {
       console.log('Unsupported file type:', receivedContent.task.fileType);
     }
@@ -61,46 +61,57 @@ ws.on('message', (message) => {
   }
 });
 
+// function executePython(code, id) {
+//   // Run Python code
+//   // For example:
+//   execSync(`python3 -c "${code}"`, (error, stdout, stderr) => {
+//     if (error) {
+//       console.log("enter here in error");
+//       console.error(`Error executing Python code: ${error}`);
+//       sendResult(error, id);
+//       return;
+//     }
+//     console.log('Python output:', stdout);
+//     sendResult(stdout, id);
+//   });
+// }
+
 function executePython(code, id) {
-  // Run Python code
-  // For example:
-  execSync(`python3 -c "${code}"`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing Python code: ${error}`);
-      sendResult(error, id);
-      return;
-    }
+  try {
+    const stdout = execSync(`python3 -c "${code}"`).toString();
     console.log('Python output:', stdout);
     sendResult(stdout, id);
-  });
-}
-
-function executeCpp(code) {
-  // Run C++ code
-  // For example:
-  exec(`g++ -o output.out -xc++ - <<< "${code}" && ./output.out`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing C++ code: ${error}`);
-      return;
-    }
-    console.log('C++ output:', stdout);
-    sendResult(stdout);
-  });
-}
-
-function executeJavascript(code) {
-  // Execute JavaScript code
-  // Use eval to execute JavaScript code (use with caution)
-  // For example:
-  try {
-    eval(code);
   } catch (error) {
-    console.error(`Error executing JavaScript code: ${error}`);
+    console.error(`Error executing Python code: ${error}`);
+    sendResult(error.message, id);
   }
 }
 
+function executeCpp(code, id) {
+  exec(`g++ -o output.out -xc++ - <<< "${code}" && ./output.out`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing C++ code: ${error}`);
+      sendResult(error.message, id);
+      return;
+    }
+    console.log('C++ output:', stdout);
+    sendResult(stdout, id);
+  });
+} 
+
+function executeJavascript(code, id) {
+  try {
+    const result = eval(code);
+    console.log('JavaScript output:', result);
+    sendResult(result, id);
+  } catch (error) {
+    console.error(`Error executing JavaScript code: ${error}`);
+    sendResult(error.message, id);
+  }
+}
 function sendResult(result, id) {
   // Send the result back to the main server through the WebSocket
+  console.log("enter sendResult = ",result);
   ws.send(JSON.stringify({
     infoType: "outputInfo",
     clientId: id,
