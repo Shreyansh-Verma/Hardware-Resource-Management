@@ -1,5 +1,7 @@
 const WebSocket = require('ws');
-const { exec } = require('child_process');
+const { exec , execSync} = require('child_process');
+// const { execSync } = require('child_process');
+// const execPromise = util.promisify(exec);
 const os = require('os');
 
 const machineName = os.hostname(); // Fetch the machine name dynamically
@@ -17,7 +19,8 @@ ws.on('open', () => {
 
     let gpuInfo = 'N/A'; // Placeholder for GPU info
     try {
-      const rawGpuInfo = exec('sudo lshw -C display').toString();
+      console.log("")
+      const rawGpuInfo = execSync('sudo lshw -C display').toString();
       gpuInfo = parseGpuInfo(rawGpuInfo);
     } catch (error) {
       console.error(`Error fetching GPU info: ${error.message}`);
@@ -128,6 +131,7 @@ function getCPUInfo() {
 }
 // Function to parse GPU information
 function parseGpuInfo(rawInfo) {
+  console.log("enter rawInfo = ",rawInfo);
   const gpuInfoArray = [];
   const gpuRegex = /  \*-display([\s\S]*?)(?=\s{2,}\*-display|$)/g;
   const gpuMatches = rawInfo.matchAll(gpuRegex);
