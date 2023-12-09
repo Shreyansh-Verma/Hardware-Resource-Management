@@ -7,7 +7,7 @@ function  ArpTable() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/arp-table')
+                .get('https://dfs-backend.onrender.com//arp-table')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.networkInterfaces);
                     setArpTableInfo(response.data.arpTable);

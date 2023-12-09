@@ -7,7 +7,7 @@ function KernelModule() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/kernel-modules')
+                .get('https://dfs-backend.onrender.com//kernel-modules')
                 .then((response) => {
                     // console.log('res keys =  ', response.data.modules);
                     setKernelInfo(response.data.modules);

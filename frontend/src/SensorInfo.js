@@ -7,7 +7,7 @@ function  SensorInfo() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/sensors')
+                .get('https://dfs-backend.onrender.com//sensors')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setSensorInfo(response.data.sensorData);

@@ -7,7 +7,7 @@ function  BatteryInfo() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/battery')
+                .get('https://dfs-backend.onrender.com//battery')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setBatteryInfo(response.data.battery);

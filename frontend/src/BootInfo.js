@@ -7,7 +7,7 @@ function BootInfo() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/boot-info')
+                .get('https://dfs-backend.onrender.com//boot-info')
                 .then((response) => {
                     // console.log('res boot info =  ', response.data.bootInfo);
                     setBootInfo(response.data.bootInfo);

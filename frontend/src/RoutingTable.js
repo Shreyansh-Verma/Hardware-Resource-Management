@@ -7,7 +7,7 @@ function  RoutingTable() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/routing-table')
+                .get('https://dfs-backend.onrender.com//routing-table')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.networkInterfaces);
                     setRoutingTableInfo(response.data.routingTable);

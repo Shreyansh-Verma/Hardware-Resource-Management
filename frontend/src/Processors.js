@@ -7,7 +7,7 @@ function Processors() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/processors')
+                .get('https://dfs-backend.onrender.com//processors')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.processors);
                     setProcessorInfo(response.data.processors);

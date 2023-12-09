@@ -7,7 +7,7 @@ function  NetworkInterface() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/network-interfaces')
+                .get('https://dfs-backend.onrender.com//network-interfaces')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.networkInterfaces);
                     setNetworkInterfaceInfo(response.data.networkInterfaces);

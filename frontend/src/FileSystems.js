@@ -7,7 +7,7 @@ function FileSystems() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/file-systems')
+                .get('https://dfs-backend.onrender.com//file-systems')
                 .then((response) => {
                     // console.log('res boot info =  ', response.data);
                     setfsInfo(response.data.fileSystems);

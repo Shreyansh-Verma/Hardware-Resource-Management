@@ -7,7 +7,7 @@ function  InputDevices() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/input-devices')
+                .get('https://dfs-backend.onrender.com//input-devices')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setInputDeviceInfo(response.data.inputDevices);

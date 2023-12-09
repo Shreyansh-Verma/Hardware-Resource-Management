@@ -7,7 +7,7 @@ function  UsbDevices() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/usb-devices')
+                .get('https://dfs-backend.onrender.com//usb-devices')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setUsbDeviceInfo(response.data.usbDevices);

@@ -7,7 +7,7 @@ function EnvVariable() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/environment-variables')
+                .get('https://dfs-backend.onrender.com//environment-variables')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.environmentVariables);
                     setEnvVarInfo(response.data.environmentVariables);

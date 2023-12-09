@@ -7,7 +7,7 @@ function  PciDevices() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/pci-devices')
+                .get('https://dfs-backend.onrender.com//pci-devices')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setPciDeviceInfo(response.data.pciDevices);

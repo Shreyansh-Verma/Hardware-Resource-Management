@@ -7,7 +7,7 @@ function  DnsServer() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/dns-servers')
+                .get('https://dfs-backend.onrender.com//dns-servers')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.networkInterfaces);
                     setDnsServerInfo(response.data);

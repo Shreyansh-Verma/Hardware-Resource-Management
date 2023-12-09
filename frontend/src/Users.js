@@ -7,7 +7,7 @@ function Users() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/users')
+                .get('https://dfs-backend.onrender.com//users')
                 .then((response) => {
                     // console.log('res boot info =  ', response.data);
                     setUserInfo(response.data.users);

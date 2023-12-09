@@ -7,7 +7,7 @@ function Groups() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/groups')
+                .get('https://dfs-backend.onrender.com//groups')
                 .then((response) => {
                     // console.log('res boot info =  ', response.data);
                     setGroupInfo(response.data.groups);

@@ -7,7 +7,7 @@ function  StorageDevices() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/storage-devices')
+                .get('https://dfs-backend.onrender.com//storage-devices')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.pciDevices);
                     setStorageDeviceInfo(response.data.storageDevices);

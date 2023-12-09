@@ -7,7 +7,7 @@ function  IpConnections() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/ip-connections')
+                .get('https://dfs-backend.onrender.com//ip-connections')
                 .then((response) => {
                     console.log('res boot info =  ', response.data.networkInterfaces);
                     setIpConnectionInfo(response.data.ipConnections);

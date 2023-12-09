@@ -25,7 +25,7 @@ function SystemInfo() {
     useEffect(() => {
         const fetchSystemInfo = () => {
             axios
-                .get('http://localhost:5000/system-info')
+                .get('https://dfs-backend.onrender.com//system-info')
                 .then((response) => {
                     setSystemInfo(response.data);
                 })
@@ -36,7 +36,7 @@ function SystemInfo() {
 
         const fetechOsInfo = () => {
             axios
-                .get('http://localhost:5000/operating-system-info')
+                .get('https://dfs-backend.onrender.com//operating-system-info')
                 .then((response) => {
                     console.log('res - ', response.data);
                     setOsInfo(response.data);

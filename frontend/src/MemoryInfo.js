@@ -8,7 +8,7 @@ function MemoryInfo() {
     useEffect(() => {
         const fetchMemInfo = () => {
             axios
-                .get('http://localhost:5000/memory')
+                .get('https://dfs-backend.onrender.com//memory')
                 .then((response) => {
                     // console.log('res - ', response.data.memory);
                     setMemInfo(response.data.memory);
