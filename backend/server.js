@@ -6,6 +6,7 @@ const { exec } = require('child_process');
 const WebSocket = require('ws');
 const app = express();
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 const http = require('http');
 const cors = require('cors');
 const amqp = require('amqplib');
@@ -15,6 +16,8 @@ const socketName = new Map();
 const clients = new Map();
 const upload = multer({ dest: 'uploads/' }); // Destination folder for uploaded files
 const rabbitmqConnectionString = 'amqp://localhost'; // Update with your RabbitMQ connection string
+app.use(bodyParser.json());
+
 
 app.use(cors());
 
@@ -392,15 +395,17 @@ async function allocateCPUsToTasksRabbit() {
 }
 
 // Endpoint to deallocate resources by name
-app.delete('/deallocate/:name', async (req, res) => {
-  const { name } = req.params;
+app.post('/deallocate', async (req, res) => {
+  console.log("req = ",req.body)
+  const { name } = req.body; // Assuming 'name' is sent in the request body
 
   try {
     // Find the entry by name and remove it from the database
-    const deletedAgent = await Agent.findOneAndDelete({ name });
-
-    if (!deletedAgent) {
-      return res.status(404).json({ success: false, message: 'Resource not found' });
+   
+    if(agents.has(name))
+    {
+      agents.get(name).close();
+      agents.delete(agents.get(name));
     }
 
     return res.status(200).json({ success: true, message: 'Resource deallocated successfully' });

@@ -5,6 +5,8 @@ import useWebSocket from 'react-use-websocket';
 import FileSaver from "file-saver";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { FaCheckCircle } from "react-icons/fa";
+import axios from "axios";
 
 const WS_URL = 'wss://dfs-backend.onrender.com';
 
@@ -12,6 +14,10 @@ export default function Dashboard() {
   const notify = (sys) => toast(`File Executed Successfully on ${sys}`);
   const notify2 = () => toast(`No system loaded yet.`);
   const notify3 = () => toast(`Systems Loaded Successfully.`);
+  const notify4 = (sys) => toast(`${sys} Deallocated Successfully.`);
+  const notify5 = (sys) => toast(`Error in Deallocating ${sys}.`);
+
+
 
   const [agents, setAgents] = useState([]);
   const [pressStates, setPressStates] = useState([]);
@@ -53,30 +59,50 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    fetch("https://dfs-backend.onrender.com/api/agents")
-      .then((response) => {
-        if (!response.ok) {
-          notify2();
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if(data.agents.length > 0 && !notify3Called.current){
-          notify3Called.current = true;
-          notify3();
-        }
-        else if(data.agents.length === 0 && !notify2Called.current){
-          notify2Called.current = true;
-          notify2();
-        }
-        setAgents(data.agents);
-        setPressStates(Array(data.agents.length).fill(false));
-      })
-      .catch((error) => {
-        console.error("Error fetching agents:", error.message);
-      });
-  }, []);
+    const fetchData = () => {
+      fetch("https://dfs-backend.onrender.com/api/agents")
+        .then((response) => {
+          if (!response.ok) {
+            notify2();
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if(data.agents.length > 0 && !notify3Called.current){
+            notify3Called.current = true;
+            notify3();
+          }
+          else if(data.agents.length === 0 && !notify2Called.current){
+            notify2Called.current = true;
+            notify2();
+          }
+          const updatedAgents = data.agents.map((agent) => {
+            const lastFetchedTime = new Date(agent.lastFetched).getTime();
+            const currentTime = new Date().getTime();
+            const timeDifferenceInSeconds = (currentTime - lastFetchedTime) / 1000; // Convert milliseconds to seconds
+
+            return {
+              ...agent,
+              isHealthy: timeDifferenceInSeconds <= 90, // true if within 90 seconds, otherwise false
+            };
+          });
+
+          console.log('Updated data agents - ', updatedAgents);
+          setAgents(updatedAgents);
+          setPressStates(Array(data.agents.length).fill(false));
+        })
+        .catch((error) => {
+          console.error("Error fetching agents:", error.message);
+        });
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 3000); // 30 seconds
+  
+    // Clean up the interval to avoid memory leaks
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array to run this effect only once on mount
+  
 
   const togglePress = (index) => {
     setPressStates((prevPressStates) => {
@@ -93,6 +119,16 @@ export default function Dashboard() {
     });
   };
 
+  const deallocate = (name) => {
+    axios.post('https:///dfs-backend.onrender.com/deallocate', {name: name} )
+    .then((res) => {
+        notify4(name);
+        console.log('reg - ', res);
+    })
+    .catch((err)=> {
+        notify5(name);
+    });
+  };
   return (
     <div className="m-auto bg-indigo-950">
       <Navbar currentTab="Dashboard" />
@@ -112,6 +148,12 @@ export default function Dashboard() {
                 </th>
                 <th scope="col" className="px-6 py-3">
                   Memory
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  CPU Health
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -162,6 +204,13 @@ export default function Dashboard() {
                   <td className="px-6 py-4">
                     {agent.memory}
                   </td>
+                      <td className="px-6 py-4">
+                        {agent.isHealthy ? <FaCheckCircle className="text-green-500 text-2xl" /> : 'Unhealthy'}
+                      </td>
+                      <td className="px-6 py-4">
+                      <button className="bg-transparent hover:bg-red-500 text-red-700 font-semibold hover:text-white py-2 px-4 border border-red-500 hover:border-transparent rounded"
+                          onClick={() => deallocate(agent.name)}>Deallocate</button>
+                      </td>
                 </tr>
               ))}
             </tbody>
