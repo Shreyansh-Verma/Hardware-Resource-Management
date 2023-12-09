@@ -191,9 +191,13 @@ app.post('/send-task', async (req, res) => {
 });
 
 // Endpoint to retrieve all CPUs
+// Endpoint to retrieve all CPUs
 app.get('/get-cpus', async (req, res) => {
   try {
-    const allCPUs = await Agent.distinct('cpu.model');
+    const allCPUs = await Agent.find({ 'cpu.isAvailable': true }).select('name cpu');
+    console.log("cpu = ",allCPUs);
+    // const cpuModels = allCPUs.map(agent => agent.cpu.model).flat(); // Extract CPU models
+    // console.log("cpu model = ",cpuModels);
     res.status(200).json(allCPUs);
   } catch (error) {
     console.error('Error retrieving all CPUs:', error);
@@ -204,10 +208,13 @@ app.get('/get-cpus', async (req, res) => {
 // Endpoint to retrieve all GPUs
 app.get('/get-gpus', async (req, res) => {
   try {
-    const allGPUs = await Agent.distinct('gpu.description');
+    const allGPUs = await Agent.find({ 'gpu.isAvailable': true }).select('name gpu');
+    console.log("gpu = ",allGPUs);
+    // const cpuModels = allCPUs.map(agent => agent.cpu.model).flat(); // Extract CPU models
+    // console.log("cpu model = ",cpuModels);
     res.status(200).json(allGPUs);
   } catch (error) {
-    console.error('Error retrieving all GPUs:', error);
+    console.error('Error retrieving all CPUs:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
