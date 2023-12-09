@@ -210,8 +210,7 @@ app.get('/get-gpus', async (req, res) => {
   try {
     const allGPUs = await Agent.find({ 'gpu.isAvailable': true }).select('name gpu');
     console.log("gpu = ",allGPUs);
-    // const cpuModels = allCPUs.map(agent => agent.cpu.model).flat(); // Extract CPU models
-    // console.log("cpu model = ",cpuModels);
+
     res.status(200).json(allGPUs);
   } catch (error) {
     console.error('Error retrieving all CPUs:', error);

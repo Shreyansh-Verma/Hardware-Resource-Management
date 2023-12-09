@@ -38,7 +38,7 @@ ws.on('open', () => {
   }
 
   sendHardwareInfo();
-  setInterval(sendHardwareInfo, 30000);
+  setInterval(sendHardwareInfo, 3000);
 });
 
 
@@ -119,7 +119,7 @@ function getCPUInfo() {
     return {
       model: core.model,
       speed: core.speed,
-      idlePercentage: idlePercentage.toFixed(2), // Idle percentage to two decimal places
+      idlePercentage: idlePercentage.toFixed(7), // Idle percentage to two decimal places
       isAvailable: idlePercentage > 80 // Set availability status based on idle percentage threshold
     };
   });

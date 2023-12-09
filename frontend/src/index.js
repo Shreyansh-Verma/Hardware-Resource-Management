@@ -6,6 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import Dashboard from './Dashboard';
 import Navbar from './Navbar';
+import { Stats } from './Stats';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -14,6 +15,7 @@ root.render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/stats" element={<Stats />} />
       </Routes>
     </Router>
   </React.StrictMode>

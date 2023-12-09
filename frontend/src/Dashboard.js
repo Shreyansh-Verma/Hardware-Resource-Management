@@ -120,7 +120,7 @@ export default function Dashboard() {
   };
 
   const deallocate = (name) => {
-    axios.post('https:///dfs-backend.onrender.com/deallocate', {name: name} )
+    axios.post('http:///dfs-backend.onrender.com/deallocate', {name: name} )
     .then((res) => {
         notify4(name);
         console.log('reg - ', res);
