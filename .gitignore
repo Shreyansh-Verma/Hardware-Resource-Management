@@ -24,3 +24,8 @@ package.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
+=======
+./code_till_cope_team/frontend/node_modules
+./code_till_cope_team/backend/node_modules
+>>>>>>> f213a368ea131cd380b66ccd5e94b426f540d491
