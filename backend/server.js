@@ -142,6 +142,7 @@ app.post('/upload-file-rabbitmq', upload.single('file'), async (req, res) => {
   }
 });
 
+// Route to upload-file
 app.post('/upload-file', upload.single('file'), async (req, res) => {
   try {
     const fileType = req.body.fileType;
@@ -160,37 +161,6 @@ app.post('/upload-file', upload.single('file'), async (req, res) => {
   }
 });
 
-app.post('/send-task', async (req, res) => {
-  const task = 'task'; // Placeholder for the task
-
-  try {
-    const response = await getAvailableCPUs();
-    if (response.success) {
-      const { availableCPUs } = response;
-      if (availableCPUs.length > 0) {
-        const cpuToSend = availableCPUs[0]; // Assuming sending to the first available CPU
-        console.log('CPU to send task:', cpuToSend.name);
-
-        channel.sendToQueue(
-          'taskQueue',
-          Buffer.from(JSON.stringify({ task, cpuName: cpuToSend.name })),
-          { persistent: true }
-        );
-
-        res.status(200).json({ success: true, message: 'Task added to the queue' });
-      } else {
-        res.status(404).json({ success: false, message: 'No available CPUs' });
-      }
-    } else {
-      res.status(500).json(response);
-    }
-  } catch (error) {
-    console.error('Error sending task to queue:', error.message);
-    res.status(500).json({ success: false, message: 'Error sending task to queue' });
-  }
-});
-
-// Endpoint to retrieve all CPUs
 // Endpoint to retrieve all CPUs
 app.get('/get-cpus', async (req, res) => {
   try {
@@ -229,6 +199,7 @@ app.get('/get-machines', async (req, res) => {
   }
 });
 
+// Route to retrieve all the agents.
 app.get('/api/agents', async (req, res) => {
     // console.log("enter");  
     try {
@@ -252,6 +223,12 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
 });
 
+// Database Schmea 
+ // name :  Contains name of the database.
+ // cpu: It consist list of the cpu cores present with additional information like model, speed, idle percentage.
+ // gpu: It consist list of GPUs present with additional information like description, product, vendor.
+ // memory; It denotes the available memory of the system.
+ // lastFetched: It denotes the last timestamp when the record was fetched.
 
 const agentSchema = new mongoose.Schema({
   name: String,
@@ -271,7 +248,11 @@ const agentSchema = new mongoose.Schema({
   lastFetched: { type: Date, default: Date.now } // Field to store the last fetched timestamp
 });
 
+// Establish connection to the db.
+
 const Agent = mongoose.model('agentData', agentSchema);
+
+// Establish connection to the web socket.
 
 wss.on('connection', (ws) => {
   console.log('Agent connected.');
@@ -376,16 +357,12 @@ async function allocateCPUsToTasksRabbit() {
       // console.log("Enter", availableCPUs);
       // Assume there's a method to fetch tasks from the queue
       const taskFromQueue = await fetchTaskFromQueue();
-      console.log("Task from queue = ",taskFromQueue);
       // console.log("task = ",taskFromQueue===null)
       if (taskFromQueue) {
-        console.log("Enter = ",taskFromQueue)
         const cpuToSend = availableCPUs[0]; // Modify this logic to suit your requirements
-        console.log('Allocating task from queue to CPU:', cpuToSend.name);
-        console.log("taskFromQueue = ", taskFromQueue);
+
         if(clients.has(taskFromQueue.clientId))
         {
-          console.log("tasks = ",cpuToSend.name);
           clients.get(taskFromQueue.clientId).send(JSON.stringify({ machine: cpuToSend.name}));
         }
 
@@ -402,7 +379,6 @@ async function allocateCPUsToTasksRabbit() {
 
 // Endpoint to deallocate resources by name
 app.post('/deallocate', async (req, res) => {
-  console.log("req = ",req.body)
   const { name } = req.body; // Assuming 'name' is sent in the request body
 
   try {
@@ -421,6 +397,7 @@ app.post('/deallocate', async (req, res) => {
   }
 });
 
+// This system checks for available tasks and if available checks for a available cpus to allocate the task to them.
 async function allocateCPUsToTasks() {
   try {
     const response = await getAvailableCPUs();
@@ -451,7 +428,7 @@ async function allocateCPUsToTasks() {
   }
 }
 
-
+// Check if any task is present in the queue and fetch the task from the queue.
 async function fetchTaskFromQueue() {
   try {
     const queue = 'taskQueue';
@@ -488,6 +465,8 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Retrieves system info of the server.
 app.get('/system-info', (req, res) => {
   try {
       const systemInfo = {
@@ -504,7 +483,7 @@ app.get('/system-info', (req, res) => {
   }
 });
 
-
+// This retrieves operating-system-info of the server.
 app.get('/operating-system-info', (req, res) => {
   const osInfo = {
       type: os.type(),
@@ -515,7 +494,7 @@ app.get('/operating-system-info', (req, res) => {
   res.json(osInfo);
 });
 
-
+// This retrieves kernel modules of the server.
 app.get('/kernel-modules', (req, res) => {
   exec('lsmod', (error, stdout, stderr) => {
       if (error) {
@@ -541,6 +520,7 @@ app.get('/kernel-modules', (req, res) => {
   });
 });
 
+// This route retrieves boot-info of the server.
 app.get('/boot-info', (req, res) => {
   exec('dmesg', (error, stdout, stderr) => {
       if (error) {
@@ -574,6 +554,7 @@ app.get('/boot-info', (req, res) => {
   });
 });
 
+// This route retrieves file system of the server.
 app.get('/file-systems', (req, res) => {
   exec('df -h', (error, stdout, stderr) => {
       if (error) {
@@ -594,6 +575,7 @@ app.get('/file-systems', (req, res) => {
   });
 });
 
+// This route retrieves users of the server.
 app.get('/users', (req, res) => {
   fs.readFile('/etc/passwd', 'utf8', (err, data) => {
       if (err) {
@@ -612,6 +594,7 @@ app.get('/users', (req, res) => {
   });
 });
 
+// This route retrieves groups of the server.
 app.get('/groups', (req, res) => {
   fs.readFile('/etc/group', 'utf8', (err, data) => {
       if (err) {
@@ -636,11 +619,13 @@ app.get('/groups', (req, res) => {
   });
 });
 
+// This route retrieves processors of the server.
 app.get('/processors', (req, res) => {
   const cpuInfo = os.cpus();
   res.json({ processors: cpuInfo });
 });
 
+// This route retrieves gpu-info of the server.
 app.get('/gpu-info', (req, res) => {
   exec('lspci | grep VGA', (error, stdout, stderr) => {
       if (error) {
@@ -657,6 +642,7 @@ app.get('/gpu-info', (req, res) => {
   });
 });
 
+// This route retrieves environment-variables of the server.
 app.get('/environment-variables', (req, res) => {
   const environmentVariables = Object.entries(process.env).map(([key, value]) => ({
       name: key,
@@ -665,6 +651,7 @@ app.get('/environment-variables', (req, res) => {
   res.json({ environmentVariables });
 });
 
+// This route retrieves memory of the server.
 app.get('/memory', (req, res) => {
   const memoryInfo = {
       memFree: {
@@ -693,7 +680,7 @@ app.get('/memory', (req, res) => {
   res.json({ memory: memoryInfo });
 });
 
-
+// This route retrieves pci-devices of the server.
 app.get('/pci-devices', (req, res) => {
   exec('lspci', (error, stdout, stderr) => {
       if (error) {
@@ -709,6 +696,7 @@ app.get('/pci-devices', (req, res) => {
   });
 });
 
+// This route retrieves usb-devices of the server.
 app.get('/usb-devices', (req, res) => {
   exec('lsusb', (error, stdout, stderr) => {
       if (error) {
@@ -725,7 +713,7 @@ app.get('/usb-devices', (req, res) => {
   });
 });
 
-
+// This route retrieves printers of the server.
 app.get('/printers', (req, res) => {
   exec('lpstat -a', (error, stdout, stderr) => {
       if (error) {
@@ -741,6 +729,7 @@ app.get('/printers', (req, res) => {
   });
 });
 
+// This route retrieves battery-info of the server.
 app.get('/battery', (req, res) => {
   exec('upower -i /org/freedesktop/UPower/devices/battery_BAT0', (error, stdout, stderr) => {
       if (error) {
@@ -764,6 +753,7 @@ app.get('/battery', (req, res) => {
   });
 });
 
+// This route retrieves sensors-devices of the server.
 app.get('/sensors', (req, res) => {
   exec('sensors', (error, stdout, stderr) => {
       if (error) {
@@ -799,6 +789,7 @@ app.get('/sensors', (req, res) => {
   });
 });
 
+// This route retrieves input-devices of the server.
 app.get('/input-devices', (req, res) => {
   exec('xinput list', (error, stdout, stderr) => {
       if (error) {
@@ -814,6 +805,7 @@ app.get('/input-devices', (req, res) => {
   });
 });
 
+// This route retrieves storage-devices of the server.
 app.get('/storage-devices', (req, res) => {
   exec('lsblk -d -o NAME,ROTA,MODEL,SIZE,VENDOR', (error, stdout, stderr) => {
       if (error) {
@@ -839,6 +831,7 @@ app.get('/storage-devices', (req, res) => {
   });
 });
 
+// This route retrieves dmi info of the server.
 app.get('/dmi', (req, res) => {
   exec('sudo dmidecode', (error, stdout, stderr) => {
       if (error) {
@@ -850,6 +843,7 @@ app.get('/dmi', (req, res) => {
   });
 });
 
+// This route retrieves network-interfaces of the server.
 app.get('/network-interfaces', (req, res) => {
   exec('ip -o link show', (error, stdout, stderr) => {
       if (error) {
@@ -871,6 +865,7 @@ app.get('/network-interfaces', (req, res) => {
   });
 });
 
+// This route retrieves ip-connections of the server.
 app.get('/ip-connections', (req, res) => {
   exec('ss -tuln', (error, stdout, stderr) => {
       if (error) {
@@ -894,6 +889,7 @@ app.get('/ip-connections', (req, res) => {
   });
 });
 
+// This route retrieves routing-table info of the server.
 app.get('/routing-table', (req, res) => {
   exec('ip route', (error, stdout, stderr) => {
       if (error) {
@@ -925,6 +921,7 @@ app.get('/routing-table', (req, res) => {
   });
 });
 
+// This route retrieves arp-table info of the server.
 app.get('/arp-table', (req, res) => {
   exec('ip neigh', (error, stdout, stderr) => {
       if (error) {
@@ -956,7 +953,7 @@ app.get('/arp-table', (req, res) => {
   });
 });
 
-
+// This route retrieves dns table info of the server.
 app.get('/dns-servers', (req, res) => {
   fs.readFile('/etc/resolv.conf', 'utf8', (err, data) => {
       if (err) {
@@ -974,6 +971,7 @@ app.get('/dns-servers', (req, res) => {
   });
 });
 
+// This route retrieves network-interfaces of the server.
 app.get('/network-statistics', (req, res) => {
   exec('netstat -i', (error, stdout, stderr) => {
       if (error) {
@@ -985,9 +983,9 @@ app.get('/network-statistics', (req, res) => {
           .split('\n')
           .slice(2) // Skip the header
           .map((line) => {
-              const [interface, mtu, network, address, mask, flags] = line.trim().split(/\s+/);
+              const [interfaces, mtu, network, address, mask, flags] = line.trim().split(/\s+/);
               return {
-                  interface,
+                  interfaces,
                   mtu,
                   network,
                   address,
@@ -1000,6 +998,7 @@ app.get('/network-statistics', (req, res) => {
   });
 });
 
+// This route retrieves shared-directories of the server.
 app.get('/shared-directories', (req, res) => {
   exec('smbstatus -S', (error, stdout, stderr) => {
       if (error) {
@@ -1023,3 +1022,8 @@ app.get('/shared-directories', (req, res) => {
       res.json({ sharedDirectories });
   });
 });
+
+module.exports = {
+  TaskQueue,
+  generateClientId,
+};
