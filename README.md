@@ -3,4 +3,4 @@
 - '''npm start'' to start react front end
 
 # To run test
-- Run test by using '''npx zest'''
+- Run test by using '''npx jest'''
