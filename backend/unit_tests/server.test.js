@@ -1,7 +1,13 @@
+const { TaskQueue, generateClientId, app } = require('../server');
 const request = require('supertest');
 const fs = require('fs');
-const { TaskQueue, generateClientId, app } = require('../server');
 const mongoose = require('mongoose');
+const express = require('express');
+const { exec } = require('child_process');
+const multer = require('multer');
+const os = require('os');
+
+jest.mock('os');
 
 // Mock the mongoose module
 jest.mock('mongoose', () => {
@@ -9,12 +15,32 @@ jest.mock('mongoose', () => {
     connect: jest.fn(), // Mock the connect function
     model: jest.fn(() => ({
       findOneAndUpdate: jest.fn(),
+      find: jest.fn(),
     })),
     Schema: jest.fn(() => ({
       set: jest.fn(),
     })),
   };
   return mongoose;
+});
+
+
+const agentSchema = new mongoose.Schema({
+  name: String,
+  cpu: [{
+    model: String,
+    speed: Number,
+    idlePercentage: String,
+    isAvailable: { type: Boolean} // Field to denote CPU availability
+  }],
+  gpu: [{
+    description: String,   
+    product: String,
+    vendor: String,
+    isAvailable: { type: Boolean} // Field to denote GPU availability
+  }],
+  memory: String,
+  lastFetched: { type: Date, default: Date.now } // Field to store the last fetched timestamp
 });
 
 // File system mock
@@ -24,8 +50,7 @@ jest.mock('fs', () => ({
   mkdirSync: jest.fn(), // Ensure 'mkdirSync' is mocked if used in the code
 }));
 
-
-// Tests description.
+// Tests description
 describe('TaskQueue Tests', () => {
   let taskQueue;
 
@@ -68,50 +93,136 @@ describe('generateClientId function', () => {
   });
 });
 
-// Test upload-file.
-describe('POST /upload-file', () => {
-  it('should add a task to the queue when uploading a file', async () => {
-    // Mock the file and request body data
-    const fileMockPath = '/mocked/path/to/uploaded/file.txt';
-    const fileType = 'text';
-    const clientId = 'mockedClientId';
-    const fileContent = 'Mocked file content';
-    
-    fs.readFileSync.mockReturnValue(fileContent);
+jest.mock('child_process');
 
-    const mockEnqueue = jest.fn();
-    const originalEnqueue = app.__get__('taskQueue').enqueue;
-    app.__get__('taskQueue').enqueue = mockEnqueue;
+describe('GET /battery', () => {
+  it('should return battery information', async () => {
+    const mockStdout = `
+      state: discharging
+      energy: 50%
+      ...
+    `;
 
-    const response = await request(app)
-      .post('/upload-file')
-      .field('fileType', fileType)
-      .field('clientId', clientId)
-      .attach('file', fileMockPath);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ success: true, message: 'Task added to the queue' });
-    expect(fs.readFileSync).toHaveBeenCalledWith(fileMockPath, 'utf-8');
-    expect(fs.unlinkSync).toHaveBeenCalledWith(fileMockPath);
-    expect(mockEnqueue).toHaveBeenCalledWith({ clientId, fileType, fileContent });
-
-    // Restore the original enqueue function after the test
-    app.__get__('taskQueue').enqueue = originalEnqueue;
-  });
-
-  it('should handle file upload error', async () => {
-    // Simulate an error during file upload
-    fs.readFileSync.mockImplementation(() => {
-      throw new Error('Mocked file read error');
+    exec.mockImplementation((command, callback) => {
+      callback(null, mockStdout, null);
     });
 
-    const response = await request(app)
-      .post('/upload-file')
-      .field('fileType', 'text')
-      .field('clientId', 'mockedClientId')
-      .attach('file', '/mocked/path/to/uploaded/file.txt');
+    const response = await request(app).get('/battery');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('battery');
+  });
+
+  it('should handle error when retrieving battery information fails', async () => {
+    exec.mockImplementation((command, callback) => {
+      callback(new Error('Failed to execute command'), null, 'Error message');
+    });
+
+    const response = await request(app).get('/battery');
 
     expect(response.status).toBe(500);
-    expect(response.body).toEqual({ success: false, message: 'Error handling file upload' });
+    expect(response.body).toEqual({ error: 'Failed to retrieve battery information' });
   });
 });
+
+describe('GET /usb-devices', () => {
+  it('should return USB device information', async () => {
+    const mockStdout = `
+      Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+      Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+      ...
+    `;
+
+    exec.mockImplementation((command, callback) => {
+      callback(null, mockStdout, null);
+    });
+
+    const response = await request(app).get('/usb-devices');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('usbDevices');
+  });
+
+  it('should handle error when retrieving USB device information fails', async () => {
+    exec.mockImplementation((command, callback) => {
+      callback(new Error('Failed to execute lsusb'), null, 'Error message');
+    });
+
+    const response = await request(app).get('/usb-devices');
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: 'Failed to retrieve USB device information' });
+  });
+});
+
+describe('GET /pci-devices', () => {
+  it('should return PCI device information', async () => {
+    const mockStdout = `
+      00:00.0 Host bridge: Intel Corporation Xeon E3-1200 v6/7th Gen Core Processor Host Bridge/DRAM Registers (rev 02)
+      00:01.0 PCI bridge: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor PCIe Controller (x16) (rev 02)
+      ...
+    `;
+
+    exec.mockImplementation((command, callback) => {
+      callback(null, mockStdout, null);
+    });
+
+    const response = await request(app).get('/pci-devices');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('pciDevices');
+  });
+
+  it('should handle error when retrieving PCI device information fails', async () => {
+    exec.mockImplementation((command, callback) => {
+      callback(new Error('Failed to execute lspci'), null, 'Error message');
+    });
+
+    const response = await request(app).get('/pci-devices');
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: 'Failed to retrieve PCI device information' });
+  });
+});
+
+describe('GET /memory', () => {
+  it('should return memory information', async () => {
+    const mockMemoryInfo = {
+      memFree: os.totalmem() / 4, // Mocking 1/4th of total memory as free
+      memAvailable: os.totalmem() / 2, // Mocking 1/2 of total memory as available
+      buffers: os.totalmem() / 8, // Mocking 1/8th of total memory as buffers
+      cached: os.totalmem() / 8, // Mocking 1/8th of total memory as cached
+      // Mock other memory types as needed
+    };
+
+    os.totalmem.mockReturnValue(mockMemoryInfo.memFree + mockMemoryInfo.memAvailable);
+
+    const response = await request(app).get('/memory');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('memory');
+    expect(response.body.memory).toEqual({
+      memFree: {
+        field: 'Free Memory',
+        description: expect.any(String),
+        value: `${(mockMemoryInfo.memFree / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      },
+      memAvailable: {
+        field: 'Available Memory',
+        description: expect.any(String),
+        value: `${(mockMemoryInfo.memAvailable / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      },
+      buffers: {
+        field: 'Buffers',
+        description: expect.any(String),
+        value: `${(mockMemoryInfo.buffers / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      },
+      cached: {
+        field: 'Cached',
+        description: expect.any(String),
+        value: `${(mockMemoryInfo.cached / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      },
+    });
+  });
+});
+

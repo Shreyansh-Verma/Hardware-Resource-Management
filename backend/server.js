@@ -165,12 +165,12 @@ app.post('/upload-file', upload.single('file'), async (req, res) => {
 app.get('/get-cpus', async (req, res) => {
   try {
     const allCPUs = await Agent.find({ 'cpu.isAvailable': true }).select('name cpu');
-    console.log("cpu = ",allCPUs);
+    // console.log("cpu = ",allCPUs);
     // const cpuModels = allCPUs.map(agent => agent.cpu.model).flat(); // Extract CPU models
     // console.log("cpu model = ",cpuModels);
     res.status(200).json(allCPUs);
   } catch (error) {
-    console.error('Error retrieving all CPUs:', error);
+    // console.error('Error retrieving all CPUs:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -463,7 +463,7 @@ app.get('/available-gpus', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  // console.log(`Server is running on port ${PORT}`);
 });
 
 // Retrieves system info of the server.
@@ -1026,4 +1026,7 @@ app.get('/shared-directories', (req, res) => {
 module.exports = {
   TaskQueue,
   generateClientId,
+  app,
+  Agent,
+  getAvailableCPUs
 };
